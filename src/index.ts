@@ -24,13 +24,19 @@ export class PaymentsAdminClient {
     this.admin = admin;
   }
 
-  static async create(
-    algorand: AlgorandClient,
-    admin: SendingAddress,
-    supply: bigint,
-    prefundAccounts: bigint,
-    prefundTransactions: bigint,
-  ) {
+  static async create({
+    algorand,
+    admin,
+    supply,
+    prefundAccounts,
+    prefundTransactions,
+  }: {
+    algorand: AlgorandClient;
+    admin: SendingAddress;
+    supply: bigint;
+    prefundAccounts: bigint;
+    prefundTransactions: bigint;
+  }) {
     const factory = algorand.client.getTypedAppFactory(PaymentsFactory, {});
 
     const result = await factory.send.create.createApplication({
