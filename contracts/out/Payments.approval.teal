@@ -12,7 +12,7 @@ main:
     assert
     txn ApplicationID
     bz main_create_NoOp@9
-    pushbytess 0xaf236ac3 0x2753e742 0x0d977723 0xaa457d24 0xab5b4c77 // method "addToCirculation(uint64,address)void", method "instantiateAccount(address)void", method "instantiateAccounts(address[])void", method "transfer(address,address,uint64)void", method "multiTransfer((address,address,uint64)[])void"
+    pushbytess 0xaf236ac3 0x2753e742 0x0d977723 0xaa457d24 0xd94b1224 // method "addToCirculation(uint64,address)void", method "instantiateAccount(address)void", method "instantiateAccounts(address[])void", method "transfer(address,address,uint64)void", method "multiTransfer((address,uint64)[])void"
     txna ApplicationArgs 0
     match addToCirculation instantiateAccount instantiateAccounts transfer multiTransfer
     err
@@ -24,6 +24,115 @@ main_create_NoOp@9:
     txna ApplicationArgs 0
     match createApplication
     err
+
+
+// contracts/payments.algo.ts::coverFee() -> void:
+coverFee:
+    // contracts/payments.algo.ts:15
+    // function coverFee() {
+    proto 0 0
+    // contracts/payments.algo.ts:16
+    // const feePayment = gtxn.PaymentTxn(Txn.groupIndex + 1);
+    txn GroupIndex
+    intc_1 // 1
+    +
+    dupn 2
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    // contracts/payments.algo.ts:21
+    // feePayment.sender === Txn.sender &&
+    gtxns Sender
+    txn Sender
+    ==
+    // contracts/payments.algo.ts:21-23
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    bz coverFee_after_if_else@6
+    // contracts/payments.algo.ts:23
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    frame_dig 0
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    // contracts/payments.algo.ts:21-23
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    bz coverFee_after_if_else@6
+    // contracts/payments.algo.ts:25
+    // feePayment.amount === 0 &&
+    frame_dig 0
+    gtxns Amount
+    // contracts/payments.algo.ts:21-25
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    // // Ensure the amount is zero so we can be sure the account is not spending ALGO on anything else
+    // feePayment.amount === 0 &&
+    bnz coverFee_after_if_else@6
+    // contracts/payments.algo.ts:29
+    // feePayment.closeRemainderTo === Global.currentApplicationAddress
+    frame_dig 0
+    gtxns CloseRemainderTo
+    global CurrentApplicationAddress
+    ==
+    // contracts/payments.algo.ts:21-29
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    // // Ensure the amount is zero so we can be sure the account is not spending ALGO on anything else
+    // feePayment.amount === 0 &&
+    // // Always close to the app to ensure it gets back any excess from the sender
+    // // This is especially important since we always send Global.minBalance
+    // // This is also important for the future when fees may be refundable
+    // feePayment.closeRemainderTo === Global.currentApplicationAddress
+    bz coverFee_after_if_else@6
+    // contracts/payments.algo.ts:33-39
+    // itxn
+    //   .payment({
+    //     receiver: Txn.sender,
+    //     // We always add Global.minBalance assuming the account has 0 ALGO
+    //     amount: Global.minBalance + feePayment.fee,
+    //   })
+    //   .submit();
+    itxn_begin
+    // contracts/payments.algo.ts:35
+    // receiver: Txn.sender,
+    txn Sender
+    // contracts/payments.algo.ts:37
+    // amount: Global.minBalance + feePayment.fee,
+    global MinBalance
+    frame_dig 0
+    gtxns Fee
+    +
+    itxn_field Amount
+    itxn_field Receiver
+    // contracts/payments.algo.ts:33-38
+    // itxn
+    //   .payment({
+    //     receiver: Txn.sender,
+    //     // We always add Global.minBalance assuming the account has 0 ALGO
+    //     amount: Global.minBalance + feePayment.fee,
+    //   })
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    // contracts/payments.algo.ts:33-39
+    // itxn
+    //   .payment({
+    //     receiver: Txn.sender,
+    //     // We always add Global.minBalance assuming the account has 0 ALGO
+    //     amount: Global.minBalance + feePayment.fee,
+    //   })
+    //   .submit();
+    itxn_submit
+
+coverFee_after_if_else@6:
+    retsub
 
 
 // contracts/payments.algo.ts::Payments.createApplication[routing]() -> void:
@@ -305,107 +414,9 @@ transfer:
     // contracts/payments.algo.ts:96
     // this._transfer(sender, receiver, amount);
     callsub _transfer
-    // contracts/payments.algo.ts:16
-    // const feePayment = gtxn.PaymentTxn(Txn.groupIndex + 1);
-    txn GroupIndex
-    intc_1 // 1
-    +
-    dupn 2
-    gtxns TypeEnum
-    intc_1 // pay
-    ==
-    assert // transaction type is pay
-    // contracts/payments.algo.ts:21
-    // feePayment.sender === Txn.sender &&
-    gtxns Sender
-    txn Sender
-    ==
-    // contracts/payments.algo.ts:21-23
-    // feePayment.sender === Txn.sender &&
-    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
-    // feePayment.receiver === Global.currentApplicationAddress &&
-    bz transfer_after_if_else@6
-    // contracts/payments.algo.ts:23
-    // feePayment.receiver === Global.currentApplicationAddress &&
-    dup
-    gtxns Receiver
-    global CurrentApplicationAddress
-    ==
-    // contracts/payments.algo.ts:21-23
-    // feePayment.sender === Txn.sender &&
-    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
-    // feePayment.receiver === Global.currentApplicationAddress &&
-    bz transfer_after_if_else@6
-    // contracts/payments.algo.ts:25
-    // feePayment.amount === 0 &&
-    dup
-    gtxns Amount
-    // contracts/payments.algo.ts:21-25
-    // feePayment.sender === Txn.sender &&
-    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
-    // feePayment.receiver === Global.currentApplicationAddress &&
-    // // Ensure the amount is zero so we can be sure the account is not spending ALGO on anything else
-    // feePayment.amount === 0 &&
-    bnz transfer_after_if_else@6
-    // contracts/payments.algo.ts:29
-    // feePayment.closeRemainderTo === Global.currentApplicationAddress
-    dup
-    gtxns CloseRemainderTo
-    global CurrentApplicationAddress
-    ==
-    // contracts/payments.algo.ts:21-29
-    // feePayment.sender === Txn.sender &&
-    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
-    // feePayment.receiver === Global.currentApplicationAddress &&
-    // // Ensure the amount is zero so we can be sure the account is not spending ALGO on anything else
-    // feePayment.amount === 0 &&
-    // // Always close to the app to ensure it gets back any excess from the sender
-    // // This is especially important since we always send Global.minBalance
-    // // This is also important for the future when fees may be refundable
-    // feePayment.closeRemainderTo === Global.currentApplicationAddress
-    bz transfer_after_if_else@6
-    // contracts/payments.algo.ts:33-39
-    // itxn
-    //   .payment({
-    //     receiver: Txn.sender,
-    //     // We always add Global.minBalance assuming the account has 0 ALGO
-    //     amount: Global.minBalance + feePayment.fee,
-    //   })
-    //   .submit();
-    itxn_begin
-    // contracts/payments.algo.ts:35
-    // receiver: Txn.sender,
-    txn Sender
-    // contracts/payments.algo.ts:37
-    // amount: Global.minBalance + feePayment.fee,
-    global MinBalance
-    dig 2
-    gtxns Fee
-    +
-    itxn_field Amount
-    itxn_field Receiver
-    // contracts/payments.algo.ts:33-38
-    // itxn
-    //   .payment({
-    //     receiver: Txn.sender,
-    //     // We always add Global.minBalance assuming the account has 0 ALGO
-    //     amount: Global.minBalance + feePayment.fee,
-    //   })
-    intc_1 // 1
-    itxn_field TypeEnum
-    intc_0 // 0
-    itxn_field Fee
-    // contracts/payments.algo.ts:33-39
-    // itxn
-    //   .payment({
-    //     receiver: Txn.sender,
-    //     // We always add Global.minBalance assuming the account has 0 ALGO
-    //     amount: Global.minBalance + feePayment.fee,
-    //   })
-    //   .submit();
-    itxn_submit
-
-transfer_after_if_else@6:
+    // contracts/payments.algo.ts:97
+    // coverFee();
+    callsub coverFee
     // contracts/payments.algo.ts:95
     // transfer(sender: Account, receiver: Account, amount: uint64) {
     intc_1 // 1
@@ -422,7 +433,7 @@ multiTransfer:
     extract_uint16 // on error: invalid array length header
     dup
     cover 2
-    pushint 72
+    pushint 40
     *
     pushint 2
     +
@@ -434,7 +445,7 @@ multiTransfer:
 
 multiTransfer_for_header@2:
     // contracts/payments.algo.ts:101
-    // for (const { sender, receiver, amount } of clone(transfers)) {
+    // for (const { receiver, amount } of clone(transfers)) {
     dup
     dig 2
     <
@@ -444,19 +455,19 @@ multiTransfer_for_header@2:
     dig 1
     dup
     cover 2
-    pushint 72
+    pushint 40
     *
-    pushint 72
+    pushint 40
     extract3 // on error: index access is out of bounds
     dup
     extract 0 32
-    dig 1
-    extract 32 32
-    uncover 2
-    pushint 64
+    swap
+    intc_2 // 32
     extract_uint64
     // contracts/payments.algo.ts:102
-    // this._transfer(sender, receiver, amount);
+    // this._transfer(Txn.sender, receiver, amount);
+    txn Sender
+    cover 2
     callsub _transfer
     intc_1 // 1
     +
@@ -464,6 +475,9 @@ multiTransfer_for_header@2:
     b multiTransfer_for_header@2
 
 multiTransfer_after_for@5:
+    // contracts/payments.algo.ts:105
+    // coverFee();
+    callsub coverFee
     // contracts/payments.algo.ts:100
     // multiTransfer(transfers: Transfer[]) {
     intc_1 // 1

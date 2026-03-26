@@ -40,7 +40,7 @@ function coverFee() {
   }
 }
 
-export type Transfer = { sender: Account; receiver: Account; amount: uint64 };
+export type Transfer = { receiver: Account; amount: uint64 };
 
 export class Payments extends Contract {
   admin = GlobalState<Account>({ key: "a" });
@@ -98,8 +98,10 @@ export class Payments extends Contract {
   }
 
   multiTransfer(transfers: Transfer[]) {
-    for (const { sender, receiver, amount } of clone(transfers)) {
-      this._transfer(sender, receiver, amount);
+    for (const { receiver, amount } of clone(transfers)) {
+      this._transfer(Txn.sender, receiver, amount);
     }
+
+    coverFee();
   }
 }

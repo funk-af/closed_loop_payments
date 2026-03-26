@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { PaymentsAdminClient, PaymentsUserClient } from "../src";
+import { PaymentsAdminClient, PaymentsUserClient, Transfer } from "../src";
 import {
   AlgorandClient,
   ReadableAddress,
@@ -14,7 +14,7 @@ async function getAlgoBalance(
   return amount;
 }
 
-const PAYMENTS = 4;
+const MULTI_XFER_PAYMENTS = 7;
 
 describe("Payments", () => {
   let algorand: AlgorandClient;
@@ -30,8 +30,8 @@ describe("Payments", () => {
       algorand,
       admin,
       supply: 1000n,
-      prefundAccounts: BigInt(PAYMENTS * 2 + 2),
-      prefundTransactions: BigInt(PAYMENTS + 1),
+      prefundAccounts: BigInt(MULTI_XFER_PAYMENTS * 2 + 2),
+      prefundTransactions: BigInt(MULTI_XFER_PAYMENTS + 1),
     });
     zeroAlgoSender = algorand.account.random();
     zeroAlgoReceiver = algorand.account.random();
@@ -65,24 +65,25 @@ describe("Payments", () => {
     expect(await userClient.balance(zeroAlgoReceiver)).toBe(10n);
   });
 
-  it(`${PAYMENTS} payments in one transaction`, async () => {
-    const senders = Array.from({ length: PAYMENTS }, () =>
+  it(`${MULTI_XFER_PAYMENTS} payments in one transaction`, async () => {
+    const sender = algorand.account.random();
+    await adminClient.instantiateAccount(sender);
+
+    await adminClient.addToCirculation(BigInt(MULTI_XFER_PAYMENTS), sender);
+    const receivers = Array.from({ length: MULTI_XFER_PAYMENTS }, () =>
       algorand.account.random(),
     );
-    const receivers = Array.from({ length: PAYMENTS }, () =>
-      algorand.account.random(),
-    );
 
-    const sendersAndReceivers = [...senders, ...receivers];
+    await adminClient.instantiateAccounts(receivers);
 
-    await adminClient.instantiateAccounts(sendersAndReceivers);
-
-    for (const sender of senders) {
-      await adminClient.addToCirculation(1n, sender);
+    const transfers: Transfer[] = [];
+    for (let i = 0; i < MULTI_XFER_PAYMENTS; i++) {
+      transfers.push({
+        receiver: receivers[i],
+        amount: 1n,
+      });
     }
 
-    for (let i = 0; i < PAYMENTS; i++) {
-      await userClient.transfer(senders[i], receivers[i], 1n);
-    }
+    await userClient.multiTransfer(sender, transfers);
   });
 });

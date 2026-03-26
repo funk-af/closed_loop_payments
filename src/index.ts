@@ -12,6 +12,11 @@ import {
 
 const ACCOUNT_BOX_MBR = 18_900n;
 
+export type Transfer = {
+  receiver: ReadableAddress;
+  amount: bigint;
+};
+
 export class PaymentsAdminClient {
   appClient: PaymentsAppClient;
   admin: SendingAddress;
@@ -120,7 +125,34 @@ export class PaymentsUserClient {
     await group.send();
   }
 
-  balance(account: ReadableAddress) {
+  async multiTransfer(sender: SendingAddress, transfers: Transfer[]) {
+    const group = this.appClient.newGroup();
+
+    group.multiTransfer({
+      staticFee: microAlgos(0n),
+      sender,
+      args: {
+        transfers: transfers.map((t) => [
+          getAddress(t.receiver).toString(),
+          t.amount,
+        ]),
+      },
+    });
+
+    group.addTransaction(
+      await this.appClient.algorand.createTransaction.payment({
+        sender,
+        staticFee: microAlgos(3_000),
+        receiver: this.appClient.appAddress,
+        amount: microAlgos(0),
+        closeRemainderTo: this.appClient.appAddress,
+      }),
+    );
+
+    await group.send();
+  }
+
+  async balance(account: ReadableAddress) {
     return this.appClient.state.box.balances.value(
       getAddress(account).toString(),
     );
