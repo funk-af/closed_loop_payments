@@ -1,40 +1,113 @@
 import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
 import {
-  HelloWorldClient,
-  HelloWorldFactory,
-} from "../contracts/clients/HelloWorldClient";
+  PaymentsClient as PaymentsAppClient,
+  PaymentsFactory,
+} from "../contracts/clients/PaymentsClient";
 import {
   AlgorandClient,
+  getAddress,
+  microAlgos,
   ReadableAddress,
 } from "@algorandfoundation/algokit-utils";
 
-export class HelloWorld {
-  appClient: HelloWorldClient;
+const ACCOUNT_BOX_MBR = 18_900n;
+
+export class PaymentsAdminClient {
+  appClient: PaymentsAppClient;
+  admin: SendingAddress;
+
+  constructor(algorand: AlgorandClient, appId: bigint, admin: SendingAddress) {
+    this.appClient = algorand.client.getTypedAppClientById(PaymentsAppClient, {
+      appId,
+    });
+
+    this.admin = admin;
+  }
+
+  static async create(
+    algorand: AlgorandClient,
+    admin: SendingAddress,
+    supply: bigint,
+    prefundAccounts: bigint,
+    prefundTransactions: bigint,
+  ) {
+    const factory = algorand.client.getTypedAppFactory(PaymentsFactory, {});
+
+    const result = await factory.send.create.createApplication({
+      sender: admin,
+      args: { supply },
+    });
+
+    await algorand.send.payment({
+      sender: admin,
+      receiver: result.appClient.appAddress,
+      amount: microAlgos(
+        200_000n +
+          ACCOUNT_BOX_MBR * prefundAccounts +
+          3_000n * prefundTransactions,
+      ),
+    });
+
+    return new PaymentsAdminClient(algorand, result.appClient.appId, admin);
+  }
+
+  async addToCirculation(amount: bigint, receiver: ReadableAddress) {
+    return await this.appClient.send.addToCirculation({
+      sender: this.admin,
+      args: { amount, receiver: getAddress(receiver).toString() },
+    });
+  }
+
+  async instantiateAccount(account: ReadableAddress) {
+    return await this.appClient.send.instantiateAccount({
+      sender: this.admin,
+      args: { account: getAddress(account).toString() },
+    });
+  }
+}
+
+export class PaymentsUserClient {
+  appClient: PaymentsAppClient;
 
   constructor(algorand: AlgorandClient, appId: bigint) {
-    this.appClient = algorand.client.getTypedAppClientById(HelloWorldClient, {
+    this.appClient = algorand.client.getTypedAppClientById(PaymentsAppClient, {
       appId,
     });
   }
 
-  static async create(algorand: AlgorandClient, creator: SendingAddress) {
-    const factory = algorand.client.getTypedAppFactory(HelloWorldFactory, {});
+  async transfer(
+    sender: SendingAddress,
+    receiver: ReadableAddress,
+    amount: bigint,
+  ) {
+    const group = this.appClient.newGroup();
 
-    const result = await factory.send.create.bare({ sender: creator });
-
-    return new HelloWorld(algorand, result.appClient.appId);
-  }
-
-  async hello(sender: SendingAddress): Promise<string> {
-    const { return: message } = await this.appClient.send.hello({
+    group.transfer({
       sender,
-      args: {},
+      staticFee: microAlgos(0),
+      args: {
+        sender: getAddress(sender).toString(),
+        receiver: getAddress(receiver).toString(),
+        amount,
+      },
     });
 
-    if (message === undefined) {
-      throw new Error("Contract returned undefined");
-    }
+    group.addTransaction(
+      await this.appClient.algorand.createTransaction.payment({
+        sender,
+        staticFee: microAlgos(3_000),
+        receiver: this.appClient.appAddress,
+        amount: microAlgos(0),
+        closeRemainderTo: this.appClient.appAddress,
+      }),
+    );
 
-    return message;
+    await group.send();
+  }
+
+  balance(account: ReadableAddress) {
+    return this.appClient.state.box.balances.value(
+      getAddress(account).toString(),
+    );
   }
 }

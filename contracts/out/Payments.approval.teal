@@ -1,0 +1,377 @@
+#pragma version 11
+#pragma typetrack false
+
+// @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
+main:
+    intcblock 0 1 32 8
+    bytecblock "b" "a" "n" "c"
+    // contracts/payments.algo.ts:42
+    // export class Payments extends Contract {
+    txn OnCompletion
+    !
+    assert
+    txn ApplicationID
+    bz main_create_NoOp@7
+    pushbytess 0xaf236ac3 0x2753e742 0xaa457d24 // method "addToCirculation(uint64,address)void", method "instantiateAccount(address)void", method "transfer(address,address,uint64)void"
+    txna ApplicationArgs 0
+    match addToCirculation instantiateAccount transfer
+    err
+
+main_create_NoOp@7:
+    // contracts/payments.algo.ts:42
+    // export class Payments extends Contract {
+    pushbytes 0x973b616f // method "createApplication(uint64)void"
+    txna ApplicationArgs 0
+    match createApplication
+    err
+
+
+// contracts/payments.algo.ts::Payments.createApplication[routing]() -> void:
+createApplication:
+    // contracts/payments.algo.ts:51
+    // createApplication(supply: uint64) {
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_3 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // contracts/payments.algo.ts:43
+    // admin = GlobalState<Account>({ key: "a" });
+    bytec_1 // "a"
+    // contracts/payments.algo.ts:52
+    // this.admin.value = Txn.sender;
+    txn Sender
+    app_global_put
+    // contracts/payments.algo.ts:47
+    // nonCirculatingSupply = GlobalState<uint64>({ key: "n" });
+    bytec_2 // "n"
+    // contracts/payments.algo.ts:53
+    // this.nonCirculatingSupply.value = supply;
+    swap
+    app_global_put
+    // contracts/payments.algo.ts:49
+    // circulatingSupply = GlobalState<uint64>({ key: "c" });
+    bytec_3 // "c"
+    // contracts/payments.algo.ts:54
+    // this.circulatingSupply.value = 0;
+    intc_0 // 0
+    app_global_put
+    // contracts/payments.algo.ts:51
+    // createApplication(supply: uint64) {
+    intc_1 // 1
+    return
+
+
+// contracts/payments.algo.ts::Payments.addToCirculation[routing]() -> void:
+addToCirculation:
+    // contracts/payments.algo.ts:57
+    // addToCirculation(amount: uint64, receiver: Account) {
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_3 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    txna ApplicationArgs 2
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    // contracts/payments.algo.ts:58
+    // assert(Txn.sender === this.admin.value, "only admin can circulate tokens");
+    txn Sender
+    intc_0 // 0
+    // contracts/payments.algo.ts:43
+    // admin = GlobalState<Account>({ key: "a" });
+    bytec_1 // "a"
+    // contracts/payments.algo.ts:58
+    // assert(Txn.sender === this.admin.value, "only admin can circulate tokens");
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // only admin can circulate tokens
+    // contracts/payments.algo.ts:45
+    // balances = BoxMap<Account, uint64>({ keyPrefix: "b" });
+    bytec_0 // "b"
+    swap
+    concat
+    // contracts/payments.algo.ts:59
+    // assert(this.balances(receiver).exists, "receiver does not exist");
+    dup
+    box_len
+    bury 1
+    assert // receiver does not exist
+    // contracts/payments.algo.ts:61
+    // this.circulatingSupply.value += amount;
+    intc_0 // 0
+    // contracts/payments.algo.ts:49
+    // circulatingSupply = GlobalState<uint64>({ key: "c" });
+    bytec_3 // "c"
+    // contracts/payments.algo.ts:61
+    // this.circulatingSupply.value += amount;
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 2
+    +
+    // contracts/payments.algo.ts:49
+    // circulatingSupply = GlobalState<uint64>({ key: "c" });
+    bytec_3 // "c"
+    // contracts/payments.algo.ts:61
+    // this.circulatingSupply.value += amount;
+    swap
+    app_global_put
+    // contracts/payments.algo.ts:62
+    // this.nonCirculatingSupply.value -= amount;
+    intc_0 // 0
+    // contracts/payments.algo.ts:47
+    // nonCirculatingSupply = GlobalState<uint64>({ key: "n" });
+    bytec_2 // "n"
+    // contracts/payments.algo.ts:62
+    // this.nonCirculatingSupply.value -= amount;
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 2
+    -
+    // contracts/payments.algo.ts:47
+    // nonCirculatingSupply = GlobalState<uint64>({ key: "n" });
+    bytec_2 // "n"
+    // contracts/payments.algo.ts:62
+    // this.nonCirculatingSupply.value -= amount;
+    swap
+    app_global_put
+    // contracts/payments.algo.ts:63
+    // this.balances(receiver).value += amount;
+    dup
+    box_get
+    pop
+    btoi
+    uncover 2
+    +
+    itob
+    box_put
+    // contracts/payments.algo.ts:57
+    // addToCirculation(amount: uint64, receiver: Account) {
+    intc_1 // 1
+    return
+
+
+// contracts/payments.algo.ts::Payments.instantiateAccount[routing]() -> void:
+instantiateAccount:
+    // contracts/payments.algo.ts:66
+    // instantiateAccount(account: Account) {
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    // contracts/payments.algo.ts:68
+    // Txn.sender === this.admin.value,
+    txn Sender
+    intc_0 // 0
+    // contracts/payments.algo.ts:43
+    // admin = GlobalState<Account>({ key: "a" });
+    bytec_1 // "a"
+    // contracts/payments.algo.ts:68
+    // Txn.sender === this.admin.value,
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    // contracts/payments.algo.ts:67-70
+    // assert(
+    //   Txn.sender === this.admin.value,
+    //   "only admin can instantiate accounts",
+    // );
+    assert // only admin can instantiate accounts
+    // contracts/payments.algo.ts:45
+    // balances = BoxMap<Account, uint64>({ keyPrefix: "b" });
+    bytec_0 // "b"
+    swap
+    concat
+    // contracts/payments.algo.ts:71
+    // this.balances(account).value = 0;
+    intc_0 // 0
+    itob
+    box_put
+    // contracts/payments.algo.ts:66
+    // instantiateAccount(account: Account) {
+    intc_1 // 1
+    return
+
+
+// contracts/payments.algo.ts::Payments.transfer[routing]() -> void:
+transfer:
+    // contracts/payments.algo.ts:74
+    // transfer(sender: Account, receiver: Account, amount: uint64) {
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    txna ApplicationArgs 2
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    txna ApplicationArgs 3
+    dup
+    len
+    intc_3 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // contracts/payments.algo.ts:45
+    // balances = BoxMap<Account, uint64>({ keyPrefix: "b" });
+    bytec_0 // "b"
+    uncover 3
+    concat
+    // contracts/payments.algo.ts:75
+    // assert(this.balances(sender).exists, "sender does not exist");
+    dup
+    box_len
+    bury 1
+    assert // sender does not exist
+    // contracts/payments.algo.ts:45
+    // balances = BoxMap<Account, uint64>({ keyPrefix: "b" });
+    bytec_0 // "b"
+    uncover 3
+    concat
+    // contracts/payments.algo.ts:76
+    // assert(this.balances(receiver).exists, "receiver does not exist");
+    dup
+    box_len
+    bury 1
+    assert // receiver does not exist
+    // contracts/payments.algo.ts:77
+    // this.balances(sender).value -= amount;
+    dig 1
+    box_get
+    pop
+    btoi
+    dig 3
+    -
+    itob
+    uncover 2
+    swap
+    box_put
+    // contracts/payments.algo.ts:78
+    // this.balances(receiver).value += amount;
+    dup
+    box_get
+    pop
+    btoi
+    uncover 2
+    +
+    itob
+    box_put
+    // contracts/payments.algo.ts:15
+    // const feePayment = gtxn.PaymentTxn(Txn.groupIndex + 1);
+    txn GroupIndex
+    intc_1 // 1
+    +
+    dupn 2
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    // contracts/payments.algo.ts:20
+    // feePayment.sender === Txn.sender &&
+    gtxns Sender
+    txn Sender
+    ==
+    // contracts/payments.algo.ts:20-22
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    bz transfer_after_if_else@6
+    // contracts/payments.algo.ts:22
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    dup
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    // contracts/payments.algo.ts:20-22
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    bz transfer_after_if_else@6
+    // contracts/payments.algo.ts:24
+    // feePayment.amount === 0 &&
+    dup
+    gtxns Amount
+    // contracts/payments.algo.ts:20-24
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    // // Ensure the amount is zero so we can be sure the account is not spending ALGO on anything else
+    // feePayment.amount === 0 &&
+    bnz transfer_after_if_else@6
+    // contracts/payments.algo.ts:28
+    // feePayment.closeRemainderTo === Global.currentApplicationAddress
+    dup
+    gtxns CloseRemainderTo
+    global CurrentApplicationAddress
+    ==
+    // contracts/payments.algo.ts:20-28
+    // feePayment.sender === Txn.sender &&
+    // // Checking the receiver is probably superfluous since we later check close, but might as well be safe
+    // feePayment.receiver === Global.currentApplicationAddress &&
+    // // Ensure the amount is zero so we can be sure the account is not spending ALGO on anything else
+    // feePayment.amount === 0 &&
+    // // Always close to the app to ensure it gets back any excess from the sender
+    // // This is especially important since we always send Global.minBalance
+    // // This is also important for the future when fees may be refundable
+    // feePayment.closeRemainderTo === Global.currentApplicationAddress
+    bz transfer_after_if_else@6
+    // contracts/payments.algo.ts:32-38
+    // itxn
+    //   .payment({
+    //     receiver: Txn.sender,
+    //     // We always add Global.minBalance assuming the account has 0 ALGO
+    //     amount: Global.minBalance + feePayment.fee,
+    //   })
+    //   .submit();
+    itxn_begin
+    // contracts/payments.algo.ts:34
+    // receiver: Txn.sender,
+    txn Sender
+    // contracts/payments.algo.ts:36
+    // amount: Global.minBalance + feePayment.fee,
+    global MinBalance
+    dig 2
+    gtxns Fee
+    +
+    itxn_field Amount
+    itxn_field Receiver
+    // contracts/payments.algo.ts:32-37
+    // itxn
+    //   .payment({
+    //     receiver: Txn.sender,
+    //     // We always add Global.minBalance assuming the account has 0 ALGO
+    //     amount: Global.minBalance + feePayment.fee,
+    //   })
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    // contracts/payments.algo.ts:32-38
+    // itxn
+    //   .payment({
+    //     receiver: Txn.sender,
+    //     // We always add Global.minBalance assuming the account has 0 ALGO
+    //     amount: Global.minBalance + feePayment.fee,
+    //   })
+    //   .submit();
+    itxn_submit
+
+transfer_after_if_else@6:
+    // contracts/payments.algo.ts:74
+    // transfer(sender: Account, receiver: Account, amount: uint64) {
+    intc_1 // 1
+    return
