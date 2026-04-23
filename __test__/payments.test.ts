@@ -35,6 +35,7 @@ describe("Payments", () => {
       algorand,
       admin,
       supply: 1000n,
+      allowP2P: true,
       // pre-fund the app for all the account we will use in the tests
       prefundAccounts: BigInt(MULTI_XFER_PAYMENTS + 3),
       // pre-fund the app for all transactions we will send in the tests

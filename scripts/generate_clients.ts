@@ -23,7 +23,7 @@ glob("*.arc56.json", { cwd: OUT_DIR }, (err, matches) => {
         "-o",
         clientPath,
       ],
-      { stdio: "inherit" },
+      { stdio: "inherit", shell: true },
     );
   }
 });

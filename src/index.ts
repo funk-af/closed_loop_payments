@@ -33,12 +33,14 @@ export class PaymentsAdminClient {
     algorand,
     admin,
     supply,
+    allowP2P,
     prefundAccounts,
     prefundTransactions,
   }: {
     algorand: AlgorandClient;
     admin: SendingAddress;
     supply: bigint;
+    allowP2P: boolean;
     prefundAccounts: bigint;
     prefundTransactions: bigint;
   }) {
@@ -46,7 +48,7 @@ export class PaymentsAdminClient {
 
     const result = await factory.send.create.createApplication({
       sender: admin,
-      args: { supply },
+      args: { supply, allowP2P },
     });
 
     await algorand.send.payment({
@@ -106,7 +108,6 @@ export class PaymentsUserClient {
       sender,
       staticFee: microAlgos(0),
       args: {
-        sender: getAddress(sender).toString(),
         receiver: getAddress(receiver).toString(),
         amount,
       },

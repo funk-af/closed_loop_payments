@@ -13,14 +13,13 @@
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "module": "CommonJS",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
+    "types": ["node"]
   },
-  "include": ["smart_contracts/**/*.ts"],
+  "include": ["contracts/**/*.ts"],
   "exclude": ["node_modules", "dist", "coverage"]
 }
