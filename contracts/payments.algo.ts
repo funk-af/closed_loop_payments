@@ -71,17 +71,13 @@ export class Payments extends Contract {
       Txn.sender === this.admin.value,
       "only admin can instantiate accounts",
     );
+    assert(!this.balances(account).exists, "account already exists");
     this.balances(account).value = 0;
   }
 
   instantiateAccounts(accounts: Account[]) {
-    assert(
-      Txn.sender === this.admin.value,
-      "only admin can instantiate accounts",
-    );
-
     for (const account of accounts) {
-      this.balances(account).value = 0;
+      this.instantiateAccount(account);
     }
   }
 
