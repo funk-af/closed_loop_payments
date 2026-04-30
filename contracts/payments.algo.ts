@@ -9,7 +9,7 @@ import {
   gtxn,
   Global,
   itxn,
-  clone,
+  baremethod,
 } from "@algorandfoundation/algorand-typescript";
 
 function coverFee() {
@@ -56,7 +56,22 @@ export class Payments extends Contract {
     this.allowP2P.value = allowP2P;
   }
 
-  addToCirculation(amount: uint64, receiver: Account) {
+  instantiateAccount(account: Account, amount: uint64, isVendor: boolean) {
+    assert(
+      Txn.sender === Global.creatorAddress,
+      "only admin can instantiate accounts",
+    );
+    assert(!this.balances(account).exists, "account already exists");
+    this.balances(account).value = 0;
+    if (amount > 0) {
+      this.addToCirculation(account, amount);
+    }
+    if (isVendor) {
+      this.vendors(account).value = 0;
+    }
+  }
+
+  addToCirculation(receiver: Account, amount: uint64) {
     assert(
       Txn.sender === Global.creatorAddress,
       "only admin can circulate tokens",
@@ -68,19 +83,36 @@ export class Payments extends Contract {
     this.balances(receiver).value += amount;
   }
 
-  instantiateAccount(account: Account) {
-    assert(
-      Txn.sender === Global.creatorAddress,
-      "only admin can instantiate accounts",
-    );
-    assert(!this.balances(account).exists, "account already exists");
-    this.balances(account).value = 0;
+  private _transfer(sender: Account, receiver: Account, amount: uint64) {
+    assert(this.balances(sender).exists, "sender does not exist");
+    assert(this.balances(receiver).exists, "receiver does not exist");
+    this.balances(sender).value -= amount;
+    this.balances(receiver).value += amount;
   }
 
-  instantiateAccounts(accounts: Account[]) {
-    for (const account of accounts) {
-      this.instantiateAccount(account);
+  transfer(receiver: Account, amount: uint64) {
+    if (!this.allowP2P.value) {
+      assert(
+        this.vendors(Txn.sender).exists || this.vendors(receiver).exists,
+        "peer to peer transfers are not allowed, one party must be a vendor",
+      );
     }
+    this._transfer(Txn.sender, receiver, amount);
+    coverFee();
+  }
+
+  clawback(sender: Account, receiver: Account, amount: uint64) {
+    assert(Txn.sender === Global.creatorAddress, "only admin can clawback");
+    this._transfer(sender, receiver, amount);
+  }
+
+  cashout(amount: uint64) {
+    assert(this.balances(Txn.sender).exists, "sender does not exist");
+
+    this.circulatingSupply.value -= amount;
+    this.nonCirculatingSupply.value += amount;
+    this.balances(Txn.sender).value -= amount;
+    coverFee();
   }
 
   promoteVendor(account: Account) {
@@ -97,55 +129,6 @@ export class Payments extends Contract {
     this.vendors(account).delete();
   }
 
-  deleteAccount(account: Account) {
-    assert(
-      Txn.sender === Global.creatorAddress,
-      "only admin can delete accounts",
-    );
-    assert(this.balances(account).exists, "account does not exist");
-    assert(this.balances(account).value === 0, "account has non-zero balance");
-
-    this.balances(account).delete();
-    this.vendors(account).delete();
-  }
-
-  deleteAccounts(accounts: Account[]) {
-    for (const account of accounts) {
-      this.deleteAccount(account);
-    }
-  }
-
-  private _transfer(sender: Account, receiver: Account, amount: uint64) {
-    assert(this.balances(sender).exists, "sender does not exist");
-    assert(this.balances(receiver).exists, "receiver does not exist");
-    if (!this.allowP2P.value) {
-      assert(
-        this.vendors(sender).exists || this.vendors(receiver).exists,
-        "peer to peer transfers are not allowed, one party must be a vendor",
-      );
-    }
-    this.balances(sender).value -= amount;
-    this.balances(receiver).value += amount;
-  }
-
-  transfer(receiver: Account, amount: uint64) {
-    this._transfer(Txn.sender, receiver, amount);
-    coverFee();
-  }
-
-  multiTransfer(transfers: Transfer[]) {
-    for (const { receiver, amount } of clone(transfers)) {
-      this._transfer(Txn.sender, receiver, amount);
-    }
-
-    coverFee();
-  }
-
-  clawback(sender: Account, receiver: Account, amount: uint64) {
-    assert(Txn.sender === Global.creatorAddress, "only admin can clawback");
-    this._transfer(sender, receiver, amount);
-  }
-
   recover(oldAccount: Account, newAccount: Account) {
     assert(
       Txn.sender === Global.creatorAddress,
@@ -157,11 +140,41 @@ export class Payments extends Contract {
     this.balances(oldAccount).delete();
   }
 
-  cashout(amount: uint64) {
-    assert(this.balances(Txn.sender).exists, "sender does not exist");
+  deleteAccount(account: Account) {
+    assert(
+      Txn.sender === Global.creatorAddress,
+      "only admin can delete accounts",
+    );
+    assert(this.balances(account).exists, "account does not exist");
+    if (this.balances(account).value > 0) {
+      this.circulatingSupply.value -= this.balances(account).value;
+      this.nonCirculatingSupply.value += this.balances(account).value;
+    }
 
-    this.circulatingSupply.value -= amount;
-    this.nonCirculatingSupply.value += amount;
-    this.balances(Txn.sender).value -= amount;
+    this.balances(account).delete();
+    this.vendors(account).delete();
+  }
+
+  @baremethod({ allowActions: "UpdateApplication" })
+  public onUpdate() {
+    assert(
+      Txn.sender === Global.creatorAddress,
+      "only admin can update the contract",
+    );
+  }
+
+  @baremethod({ allowActions: "DeleteApplication" })
+  public onDelete() {
+    assert(
+      Txn.sender === Global.creatorAddress,
+      "only admin can delete the contract",
+    );
+    itxn
+      .payment({
+        receiver: Txn.sender,
+        amount: 0,
+        closeRemainderTo: Txn.sender,
+      })
+      .submit();
   }
 }

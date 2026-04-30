@@ -79,33 +79,33 @@ describe("Payments", () => {
     expect(receiverPostAlgo).toBe(0n);
   });
 
-  it(`${MULTI_XFER_PAYMENTS} payments in one transaction`, async () => {
-    const sender = algorand.account.random();
-    await adminClient.instantiateAccount(sender);
+  // it(`${MULTI_XFER_PAYMENTS} payments in one transaction`, async () => {
+  //   const sender = algorand.account.random();
+  //   await adminClient.instantiateAccount(sender);
 
-    await adminClient.addToCirculation(BigInt(MULTI_XFER_PAYMENTS), sender);
-    const receivers = Array.from({ length: MULTI_XFER_PAYMENTS }, () =>
-      algorand.account.random(),
-    );
+  //   await adminClient.addToCirculation(BigInt(MULTI_XFER_PAYMENTS), sender);
+  //   const receivers = Array.from({ length: MULTI_XFER_PAYMENTS }, () =>
+  //     algorand.account.random(),
+  //   );
 
-    await adminClient.instantiateAccounts(receivers);
+  //   await adminClient.instantiateAccounts(receivers);
 
-    const transfers: Transfer[] = [];
-    for (let i = 0; i < MULTI_XFER_PAYMENTS; i++) {
-      transfers.push({
-        receiver: receivers[i],
-        amount: 1n,
-      });
-    }
+  //   const transfers: Transfer[] = [];
+  //   for (let i = 0; i < MULTI_XFER_PAYMENTS; i++) {
+  //     transfers.push({
+  //       receiver: receivers[i],
+  //       amount: 1n,
+  //     });
+  //   }
 
-    await userClient.multiTransfer(sender, transfers);
+  //   await userClient.multiTransfer(sender, transfers);
 
-    expect(await getAlgoBalance(algorand, sender)).toBe(0n);
-    expect(await userClient.balance(sender)).toBe(0n);
+  //   expect(await getAlgoBalance(algorand, sender)).toBe(0n);
+  //   expect(await userClient.balance(sender)).toBe(0n);
 
-    for (const receiver of receivers) {
-      expect(await userClient.balance(receiver)).toBe(1n);
-      expect(await getAlgoBalance(algorand, receiver)).toBe(0n);
-    }
-  });
+  //   for (const receiver of receivers) {
+  //     expect(await userClient.balance(receiver)).toBe(1n);
+  //     expect(await getAlgoBalance(algorand, receiver)).toBe(0n);
+  //   }
+  // });
 });

@@ -74,18 +74,22 @@ export class PaymentsAdminClient {
   async instantiateAccount(account: ReadableAddress) {
     return await this.appClient.send.instantiateAccount({
       sender: this.admin,
-      args: { account: getAddress(account).toString() },
-    });
-  }
-
-  async instantiateAccounts(accounts: ReadableAddress[]) {
-    return await this.appClient.send.instantiateAccounts({
-      sender: this.admin,
       args: {
-        accounts: accounts.map((account) => getAddress(account).toString()),
+        account: getAddress(account).toString(),
+        amount: 0n,
+        isVendor: false,
       },
     });
   }
+
+  // async instantiateAccounts(accounts: ReadableAddress[]) {
+  //   return await this.appClient.send.instantiateAccounts({
+  //     sender: this.admin,
+  //     args: {
+  //       accounts: accounts.map((account) => getAddress(account).toString()),
+  //     },
+  //   });
+  // }
 }
 
 export class PaymentsUserClient {
@@ -126,32 +130,32 @@ export class PaymentsUserClient {
     await group.send();
   }
 
-  async multiTransfer(sender: SendingAddress, transfers: Transfer[]) {
-    const group = this.appClient.newGroup();
+  // async multiTransfer(sender: SendingAddress, transfers: Transfer[]) {
+  //   const group = this.appClient.newGroup();
 
-    group.multiTransfer({
-      staticFee: microAlgos(0n),
-      sender,
-      args: {
-        transfers: transfers.map((t) => [
-          getAddress(t.receiver).toString(),
-          t.amount,
-        ]),
-      },
-    });
+  //   group.multiTransfer({
+  //     staticFee: microAlgos(0n),
+  //     sender,
+  //     args: {
+  //       transfers: transfers.map((t) => [
+  //         getAddress(t.receiver).toString(),
+  //         t.amount,
+  //       ]),
+  //     },
+  //   });
 
-    group.addTransaction(
-      await this.appClient.algorand.createTransaction.payment({
-        sender,
-        staticFee: microAlgos(3_000),
-        receiver: this.appClient.appAddress,
-        amount: microAlgos(0),
-        closeRemainderTo: this.appClient.appAddress,
-      }),
-    );
+  //   group.addTransaction(
+  //     await this.appClient.algorand.createTransaction.payment({
+  //       sender,
+  //       staticFee: microAlgos(3_000),
+  //       receiver: this.appClient.appAddress,
+  //       amount: microAlgos(0),
+  //       closeRemainderTo: this.appClient.appAddress,
+  //     }),
+  //   );
 
-    await group.send();
-  }
+  //   await group.send();
+  // }
 
   async balance(account: ReadableAddress) {
     return this.appClient.state.box.balances.value(
